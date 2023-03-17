@@ -1,16 +1,23 @@
 package com.mackentoch.beaconsandroid;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
@@ -39,6 +46,8 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
   private BeaconManager mBeaconManager;
   private Context mApplicationContext;
   private ReactApplicationContext mReactContext;
+
+  static final String ERROR_INVALID_CONFIG = "ERROR_INVALID_CONFIG";
 
   public BeaconsAndroidModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -391,5 +400,130 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
       major.length() > 0 ? Identifier.parse(major) : null,
       minor.length() > 0 ? Identifier.parse(minor) : null
     );
+  }
+
+  @ReactMethod
+  public void enableForegroundServiceScanning(ReadableMap notificationConfig, Promise promise) {
+    if (notificationConfig == null) {
+      promise.reject(ERROR_INVALID_CONFIG, "Notification config is invalid");
+      return;
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      if (!notificationConfig.hasKey("channelId")) {
+        promise.reject(ERROR_INVALID_CONFIG, "channelId is required");
+        return;
+      }
+    }
+
+    if (!notificationConfig.hasKey("id")) {
+      promise.reject(ERROR_INVALID_CONFIG , "id is required");
+      return;
+    }
+
+    if (!notificationConfig.hasKey("icon")) {
+      promise.reject(ERROR_INVALID_CONFIG, "icon is required");
+      return;
+    }
+
+    if (!notificationConfig.hasKey("title")) {
+      promise.reject(ERROR_INVALID_CONFIG, "title is reqired");
+      return;
+    }
+
+    if (!notificationConfig.hasKey("text")) {
+      promise.reject(ERROR_INVALID_CONFIG, "text is required");
+      return;
+    }
+
+    Notification notification = buildNotification(mApplicationContext, notificationConfig);
+    if (notification == null) {
+      promise.reject(ERROR_INVALID_CONFIG, "unable to build notification");
+      return;
+    }
+
+    mBeaconManager.enableForegroundServiceScanning(notification, (int)notificationConfig.getDouble("id"));
+    promise.resolve(null);
+  }
+
+  Notification buildNotification(Context context, @NonNull ReadableMap notificationConfig) {
+    Class mainActivityClass = getMainActivityClass(context);
+    if (mainActivityClass == null) {
+      return null;
+    }
+    Intent notificationIntent = new Intent(context, mainActivityClass);
+    PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent,
+      (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT) : PendingIntent.FLAG_UPDATE_CURRENT);
+
+    Notification.Builder notificationBuilder;
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      String channelId = notificationConfig.getString("channelId");
+      if (channelId == null) {
+        Log.e(LOG_TAG, "buildNotification: invalid channelId");
+        return null;
+      }
+      notificationBuilder = new Notification.Builder(context, channelId);
+    } else {
+      notificationBuilder = new Notification.Builder(context);
+    }
+
+    int priorityInt = notificationConfig.hasKey("priority") ? notificationConfig.getInt("priority"): Notification.PRIORITY_HIGH;
+
+    int priority;
+    switch (priorityInt) {
+      case 0:
+        priority = Notification.PRIORITY_DEFAULT;
+        break;
+      case -1:
+        priority = Notification.PRIORITY_LOW;
+        break;
+      case -2:
+        priority = Notification.PRIORITY_MIN;
+        break;
+      case 2:
+        priority = Notification.PRIORITY_MAX;
+        break;
+      case 1:
+      default:
+        priority = Notification.PRIORITY_HIGH;
+        break;
+
+    }
+
+    notificationBuilder.setContentTitle(notificationConfig.getString("title"))
+      .setContentText(notificationConfig.getString("text"))
+      .setPriority(priority)
+      .setContentIntent(pendingIntent);
+
+    String iconName = notificationConfig.getString("icon");
+    if (iconName != null) {
+      notificationBuilder.setSmallIcon(getResourceIdForResourceName(context, iconName));
+    }
+
+    return notificationBuilder.build();
+  }
+
+  private Class getMainActivityClass(Context context) {
+    String packageName = context.getPackageName();
+    Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
+    if (launchIntent == null || launchIntent.getComponent() == null) {
+      Log.e("NotificationHelper", "Failed to get launch intent or component");
+      return null;
+    }
+    try {
+      return Class.forName(launchIntent.getComponent().getClassName());
+    } catch (ClassNotFoundException e) {
+      Log.e("NotificationHelper", "Failed to get main activity class");
+      return null;
+    }
+  }
+
+  private int getResourceIdForResourceName(Context context, String resourceName) {
+    int resourceId = context.getResources().getIdentifier(resourceName, "drawable", context.getPackageName());
+    if (resourceId == 0) {
+      resourceId = context.getResources().getIdentifier(resourceName, "mipmap", context.getPackageName());
+    }
+    return resourceId;
   }
 }
