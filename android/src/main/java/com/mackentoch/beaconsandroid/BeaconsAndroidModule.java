@@ -405,45 +405,45 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void enableForegroundServiceScanning(ReadableMap notificationConfig, Callback resolve, Callback reject) {
     if (notificationConfig == null) {
-      reject(ERROR_INVALID_CONFIG, "Notification config is invalid");
+      reject.invoke("Notification config is invalid");
       return;
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       if (!notificationConfig.hasKey("channelId")) {
-        reject(ERROR_INVALID_CONFIG, "channelId is required");
+        reject.invoke("channelId is required");
         return;
       }
     }
 
     if (!notificationConfig.hasKey("id")) {
-      reject(ERROR_INVALID_CONFIG , "id is required");
+      reject.invoke("id is required");
       return;
     }
 
     if (!notificationConfig.hasKey("icon")) {
-      reject(ERROR_INVALID_CONFIG, "icon is required");
+      reject.invoke("icon is required");
       return;
     }
 
     if (!notificationConfig.hasKey("title")) {
-      reject(ERROR_INVALID_CONFIG, "title is reqired");
+      reject.invoke("title is reqired");
       return;
     }
 
     if (!notificationConfig.hasKey("text")) {
-      reject(ERROR_INVALID_CONFIG, "text is required");
+      reject.invoke("text is required");
       return;
     }
 
     Notification notification = buildNotification(mApplicationContext, notificationConfig);
     if (notification == null) {
-      reject(ERROR_INVALID_CONFIG, "unable to build notification");
+      reject.invoke("unable to build notification");
       return;
     }
 
     mBeaconManager.enableForegroundServiceScanning(notification, (int)notificationConfig.getDouble("id"));
-    resolve(null);
+    resolve.invoke();
   }
 
   Notification buildNotification(Context context, @NonNull ReadableMap notificationConfig) {
@@ -531,9 +531,9 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
   public void disableForegroundServiceScanning(Callback resolve, Callback reject) {
     try {
       mBeaconManager.disableForegroundServiceScanning();
-      resolve(null);
+      resolve.invoke();
     } catch (Exception e) {
-      reject(ERROR_DISABLE_FOREGROUND_SERVICE_SCANNING, e.getMessage());
+      reject.invoke(e.getMessage());
     }
   }
 }
