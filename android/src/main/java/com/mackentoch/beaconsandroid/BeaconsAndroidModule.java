@@ -43,11 +43,11 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
   private static final String LOG_TAG = "BeaconsAndroidModule";
   private static final int RUNNING_AVG_RSSI_FILTER = 0;
   private static final int ARMA_RSSI_FILTER = 1;
+  private static final String ERROR_INVALID_CONFIG = "ERROR_INVALID_CONFIG";
+  private static final String ERROR_DISABLE_FOREGROUND_SERVICE_SCANNING = "ERROR_DISABLE_FOREGROUND_SERVICE_SCANNING";
   private BeaconManager mBeaconManager;
   private Context mApplicationContext;
   private ReactApplicationContext mReactContext;
-
-  static final String ERROR_INVALID_CONFIG = "ERROR_INVALID_CONFIG";
 
   public BeaconsAndroidModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -403,47 +403,47 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void enableForegroundServiceScanning(ReadableMap notificationConfig, Promise promise) {
+  public void enableForegroundServiceScanning(ReadableMap notificationConfig, Callback resolve, Callback reject) {
     if (notificationConfig == null) {
-      promise.reject(ERROR_INVALID_CONFIG, "Notification config is invalid");
+      reject(ERROR_INVALID_CONFIG, "Notification config is invalid");
       return;
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       if (!notificationConfig.hasKey("channelId")) {
-        promise.reject(ERROR_INVALID_CONFIG, "channelId is required");
+        reject(ERROR_INVALID_CONFIG, "channelId is required");
         return;
       }
     }
 
     if (!notificationConfig.hasKey("id")) {
-      promise.reject(ERROR_INVALID_CONFIG , "id is required");
+      reject(ERROR_INVALID_CONFIG , "id is required");
       return;
     }
 
     if (!notificationConfig.hasKey("icon")) {
-      promise.reject(ERROR_INVALID_CONFIG, "icon is required");
+      reject(ERROR_INVALID_CONFIG, "icon is required");
       return;
     }
 
     if (!notificationConfig.hasKey("title")) {
-      promise.reject(ERROR_INVALID_CONFIG, "title is reqired");
+      reject(ERROR_INVALID_CONFIG, "title is reqired");
       return;
     }
 
     if (!notificationConfig.hasKey("text")) {
-      promise.reject(ERROR_INVALID_CONFIG, "text is required");
+      reject(ERROR_INVALID_CONFIG, "text is required");
       return;
     }
 
     Notification notification = buildNotification(mApplicationContext, notificationConfig);
     if (notification == null) {
-      promise.reject(ERROR_INVALID_CONFIG, "unable to build notification");
+      reject(ERROR_INVALID_CONFIG, "unable to build notification");
       return;
     }
 
     mBeaconManager.enableForegroundServiceScanning(notification, (int)notificationConfig.getDouble("id"));
-    promise.resolve(null);
+    resolve(null);
   }
 
   Notification buildNotification(Context context, @NonNull ReadableMap notificationConfig) {
@@ -525,5 +525,15 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
       resourceId = context.getResources().getIdentifier(resourceName, "mipmap", context.getPackageName());
     }
     return resourceId;
+  }
+
+  @ReactMethod
+  public void disableForegroundServiceScanning(Callback resolve, Callback reject) {
+    try {
+      mBeaconManager.disableForegroundServiceScanning();
+      resolve(null);
+    } catch (Exception e) {
+      reject(ERROR_DISABLE_FOREGROUND_SERVICE_SCANNING, e.getMessage());
+    }
   }
 }
