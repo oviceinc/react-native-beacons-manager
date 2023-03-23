@@ -442,8 +442,13 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
       return;
     }
 
-    mBeaconManager.enableForegroundServiceScanning(notification, (int)notificationConfig.getDouble("id"));
-    resolve.invoke();
+    try {
+      mBeaconManager.enableForegroundServiceScanning(notification, (int)notificationConfig.getDouble("id"));
+      resolve.invoke();
+    } catch (Exception e) {
+      Log.e(LOG_TAG, "enableForegroundServiceScanning, error: ", e);
+      reject.invoke(e.getMessage());
+    }
   }
 
   Notification buildNotification(Context context, @NonNull ReadableMap notificationConfig) {
