@@ -50,6 +50,7 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
   private BeaconManager mBeaconManager;
   private Context mApplicationContext;
   private ReactApplicationContext mReactContext;
+  private String mForegroundServiceChannelId;
 
   public BeaconsAndroidModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -503,10 +504,13 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
       .setPriority(priority)
       .setContentIntent(pendingIntent);
 
-    NotificationChannel channel = new NotificationChannel(
-      channelId, "Beacon Channel" , NotificationManager.IMPORTANCE_DEFAULT);
-    NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-    notificationManager.createNotificationChannel(channel);
+    if (mForegroundServiceChannelId != channelId) {
+      NotificationChannel channel = new NotificationChannel(
+        channelId, "Beacon Channel" , NotificationManager.IMPORTANCE_DEFAULT);
+        NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      notificationManager.createNotificationChannel(channel);
+      mForegroundServiceChannelId = channelId;
+    }
 
     String iconName = notificationConfig.getString("icon");
     if (iconName != null) {
