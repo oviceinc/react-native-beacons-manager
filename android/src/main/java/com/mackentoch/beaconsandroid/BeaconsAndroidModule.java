@@ -1,6 +1,8 @@
 package com.mackentoch.beaconsandroid;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -48,6 +50,7 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
   private BeaconManager mBeaconManager;
   private Context mApplicationContext;
   private ReactApplicationContext mReactContext;
+  private String mForegroundServiceChannelId;
 
   public BeaconsAndroidModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -462,8 +465,8 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
 
     Notification.Builder notificationBuilder;
 
+    String channelId = notificationConfig.getString("channelId");
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      String channelId = notificationConfig.getString("channelId");
       if (channelId == null) {
         Log.e(LOG_TAG, "buildNotification: invalid channelId");
         return null;
@@ -500,6 +503,14 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule {
       .setContentText(notificationConfig.getString("text"))
       .setPriority(priority)
       .setContentIntent(pendingIntent);
+
+    if (mForegroundServiceChannelId != channelId) {
+      NotificationChannel channel = new NotificationChannel(
+        channelId, "Beacon Channel" , NotificationManager.IMPORTANCE_DEFAULT);
+        NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+      notificationManager.createNotificationChannel(channel);
+      mForegroundServiceChannelId = channelId;
+    }
 
     String iconName = notificationConfig.getString("icon");
     if (iconName != null) {
