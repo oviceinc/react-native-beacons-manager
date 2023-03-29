@@ -7,6 +7,16 @@ declare module 'react-native-beacons-manager' {
     major?: number
   }
 
+  export interface NotificationConfig {
+    channelId: string,
+    id: number,
+    title: string,
+    text: string,
+    icon: string,
+    priority?: number,
+    button?: string,
+  };
+
   export type AuthorizationStatus =
     | 'authorizedAlways'
     | 'authorizedWhenInUse'
@@ -149,6 +159,14 @@ declare module 'react-native-beacons-manager' {
     requestStateForRegion(
       region: BeaconRegion
     ): void;
+
+    /** ANDROID ONLY */
+    enableForegroundServiceScanning(
+      notificationConfig: NotificationConfig
+    ): Promise<any>;
+    
+    /** ANDROID ONLY */
+    disableForegroundServiceScanning(): Promise<any>;
   }
 
   const beacons: Beacons;
